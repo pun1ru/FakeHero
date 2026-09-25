@@ -1,0 +1,403 @@
+GPIO:
+  PC0:
+    Label: CS1_ACCEL
+    Signal: GPIO_Output
+  PC3:
+    Label: CS1_GYRO
+    Signal: GPIO_Output
+  PE10:
+    Label: INT1_ACCEL
+    Pull: GPIO_PULLUP
+    Signal: GPXTI10
+    GPXTI: true
+  PE12:
+    Label: INT1_GYRO
+    Pull: GPIO_PULLUP
+    Signal: GPXTI12
+    GPXTI: true
+Peripherals:
+  TIM:
+    TIM12:
+      Period: 1000-1
+      Prescaler: 1000-1
+      Channels:
+        CH2:
+          Label: PB15
+          PWM: true
+          Complementary: false
+          DutyCycle: null
+  ADC: {}
+  SPI:
+    SPI2:
+      BaudRate: 3.75 MBits/s
+      Direction: SPI_DIRECTION_2LINES
+      dma:
+        dma_rx: &id001
+          request_id: '12'
+          peripheral: SPI2_RX
+          dma_type: DMA
+          stream: DMA2_Stream4
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: High
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id002
+          request_id: '13'
+          peripheral: SPI2_TX
+          dma_type: DMA
+          stream: DMA2_Stream5
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Medium
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+    SPI6:
+      BaudRate: 7.5 MBits/s
+      Direction: SPI_DIRECTION_2LINES_TXONLY
+      CLKPhase: SPI_PHASE_2EDGE
+  USART:
+    USART1:
+      Mode: Asynchronous
+      dma:
+        dma_rx: &id009
+          request_id: '0'
+          peripheral: USART1_RX
+          dma_type: DMA
+          stream: DMA1_Stream0
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id010
+          request_id: '1'
+          peripheral: USART1_TX
+          dma_type: DMA
+          stream: DMA1_Stream1
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+    USART2:
+      Mode: Asynchronous
+      dma:
+        dma_rx: &id011
+          request_id: '2'
+          peripheral: USART2_RX
+          dma_type: DMA
+          stream: DMA1_Stream2
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id012
+          request_id: '3'
+          peripheral: USART2_TX
+          dma_type: DMA
+          stream: DMA1_Stream3
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+    USART3:
+      Mode: Asynchronous
+      dma:
+        dma_rx: &id013
+          request_id: '4'
+          peripheral: USART3_RX
+          dma_type: DMA
+          stream: DMA1_Stream4
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id014
+          request_id: '5'
+          peripheral: USART3_TX
+          dma_type: DMA
+          stream: DMA1_Stream5
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+    USART6:
+      Mode: Asynchronous
+      dma:
+        dma_rx: &id015
+          request_id: '14'
+          peripheral: USART6_RX
+          dma_type: DMA
+          stream: DMA2_Stream6
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id016
+          request_id: '15'
+          peripheral: USART6_TX
+          dma_type: DMA
+          stream: DMA2_Stream7
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+    UART5:
+      Mode: Asynchronous
+      dma:
+        dma_rx: &id003
+          request_id: '6'
+          peripheral: UART5_RX
+          dma_type: DMA
+          stream: DMA1_Stream6
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id004
+          request_id: '7'
+          peripheral: UART5_TX
+          dma_type: DMA
+          stream: DMA1_Stream7
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+    UART8:
+      Mode: Asynchronous
+      dma:
+        dma_rx: &id007
+          request_id: '10'
+          peripheral: UART8_RX
+          dma_type: DMA
+          stream: DMA2_Stream2
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id008
+          request_id: '11'
+          peripheral: UART8_TX
+          dma_type: DMA
+          stream: DMA2_Stream3
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+    UART7:
+      Mode: Asynchronous
+      dma:
+        dma_rx: &id005
+          request_id: '8'
+          peripheral: UART7_RX
+          dma_type: DMA
+          stream: DMA2_Stream0
+          direction: MEMORY
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: periph_to_memory
+        dma_tx: &id006
+          request_id: '9'
+          peripheral: UART7_TX
+          dma_type: DMA
+          stream: DMA2_Stream1
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: Low
+          fifo: Disabled
+          direction_full: memory_to_periph
+      DMA_RX: ENABLE
+      DMA_RX_TYPE: DMA
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: DMA
+  FDCAN:
+    FDCAN1:
+      NominalPrescaler: 3.0
+      StdFilters: 1
+      ExtFilters: 0
+      BaudRate: '1000000'
+    FDCAN2:
+      NominalPrescaler: 3.0
+      StdFilters: 1
+      ExtFilters: 0
+      BaudRate: '1000000'
+    FDCAN3:
+      NominalPrescaler: 3.0
+      StdFilters: 1
+      ExtFilters: 0
+      BaudRate: '1000000'
+  USB:
+    USB_DEVICE:
+      CLASS_NAME_HS: CDC
+      IPParameters:
+      - VirtualMode
+      - VirtualModeHS
+      - CLASS_NAME_HS
+      VirtualMode: Cdc
+      VirtualModeHS: Cdc_HS
+    USB_OTG_HS:
+      IPParameters:
+      - VirtualMode-Device_Only_FS
+      profiles:
+        Device_Only_FS:
+          VirtualMode: Device_Only_FS
+  I2C: {}
+DMA:
+  Requests:
+    Dma.Request0: USART1_RX
+    Dma.Request1: USART1_TX
+    Dma.Request10: UART8_RX
+    Dma.Request11: UART8_TX
+    Dma.Request12: SPI2_RX
+    Dma.Request13: SPI2_TX
+    Dma.Request14: USART6_RX
+    Dma.Request15: USART6_TX
+    Dma.Request2: USART2_RX
+    Dma.Request3: USART2_TX
+    Dma.Request4: USART3_RX
+    Dma.Request5: USART3_TX
+    Dma.Request6: UART5_RX
+    Dma.Request7: UART5_TX
+    Dma.Request8: UART7_RX
+    Dma.Request9: UART7_TX
+  Configurations:
+    SPI2_RX_12: *id001
+    SPI2_TX_13: *id002
+    UART5_RX_6: *id003
+    UART5_TX_7: *id004
+    UART7_RX_8: *id005
+    UART7_TX_9: *id006
+    UART8_RX_10: *id007
+    UART8_TX_11: *id008
+    USART1_RX_0: *id009
+    USART1_TX_1: *id010
+    USART2_RX_2: *id011
+    USART2_TX_3: *id012
+    USART3_RX_4: *id013
+    USART3_TX_5: *id014
+    USART6_RX_14: *id015
+    USART6_TX_15: *id016
+Timebase:
+  Source: TIM1
+  IRQ: TIM1_UP_IRQn
+Mcu:
+  Family: STM32H7
+  Type: STM32H723VGT6
+FreeRTOS:
+  RTOS: FreeRTOS
+  Enabled: false
+  AllocationMethod: null
+  MemPoolSize: null
+  CorePresent: null
+  Tasks:
+    defaultTask:
+      Priority: '24'
+      StackSize: 128B
+      EntryFunction: StartDefaultTask
+      Type: Default
+  Heap: null
+  Features: []
