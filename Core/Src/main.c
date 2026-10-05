@@ -20,6 +20,7 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
+#include "bdma.h"
 #include "dma.h"
 #include "fdcan.h"
 #include "spi.h"
@@ -87,7 +88,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  // HAL_Delay(150);        // 给电源/晶振一点缓过来的时间
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -100,6 +101,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
+  MX_BDMA_Init();
   MX_FDCAN1_Init();
   MX_FDCAN2_Init();
   MX_FDCAN3_Init();
@@ -113,7 +115,17 @@ int main(void)
   MX_SPI2_Init();
   MX_SPI6_Init();
   MX_TIM12_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+
+  /* LibXR runs module callbacks (BMI088 data-ready, ...) from the GPIO EXTI
+   * handlers, and those callbacks use FreeRTOS ...FromISR() APIs.  Such an
+   * interrupt must therefore have a priority numerically >=
+   * configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY (5).  CubeMX defaults EXTI
+   * priority to 0, which trips vPortValidateInterruptPriority()'s
+   * configASSERT() (taskDISABLE_INTERRUPTS(); for(;;)) on the first edge and
+   * freezes the whole system.  Keep this override: it is regeneration safe. */
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
 
   /* Give the passive buzzer on PB15 (TIM12_CH2) one short beep. */
   __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, htim12.Init.Period / 2U);

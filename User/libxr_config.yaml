@@ -1,7 +1,7 @@
-terminal_source: ''
+terminal_source: uart7
 software_timer:
   priority: 2
-  stack_depth: 1024
+  stack_depth: 4096
 SPI:
   spi2:
     tx_buffer_size: 32
@@ -9,10 +9,10 @@ SPI:
     dma_section: ''
     dma_enable_min_size: 3
   spi6:
-    tx_buffer_size: 32
+    tx_buffer_size: 64
     rx_buffer_size: 32
     dma_section: ''
-    dma_enable_min_size: 3
+    dma_enable_min_size: 64
 USART:
   usart1:
     tx_buffer_size: 128
@@ -68,6 +68,7 @@ Terminal:
   max_line_size: 32
   max_arg_number: 5
   max_history_number: 5
+  run_as_thread: false
 SYSTEM: FreeRTOS
 FlashLayout:
   model: STM32H723VGT6
@@ -98,3 +99,96 @@ FlashLayout:
   - index: 7
     address: '0x080E0000'
     size_kb: 128.0
+device_aliases:
+  CS1_ACCEL:
+    type: GPIO
+    aliases:
+    - CS1_ACCEL
+    - bmi088_accl_cs
+  CS1_GYRO:
+    type: GPIO
+    aliases:
+    - CS1_GYRO
+    - bmi088_gyro_cs
+  INT1_GYRO:
+    type: GPIO
+    aliases:
+    - INT1_GYRO
+    - bmi088_gyro_int
+  spi2:
+    type: SPI
+    aliases:
+    - spi2
+    - spi_bmi088
+  pwm_tim12_ch2:
+    type: PWM
+    aliases:
+    - Buzzer
+    - pwm_buzzer
+    - pwm_tim12_ch2
+  power_manager:
+    type: PowerManager
+    aliases:
+    - power_manager
+  INT1_ACCEL:
+    type: GPIO
+    aliases:
+    - INT1_ACCEL
+  spi6:
+    type: SPI
+    aliases:
+    - Light
+    - spi6
+  usart1:
+    type: UART
+    aliases:
+    - usart1
+  usart2:
+    type: UART
+    aliases:
+    - usart2
+  usart3:
+    type: UART
+    aliases:
+    - usart3
+  usart6:
+    type: UART
+    aliases:
+    - usart6
+  uart5:
+    type: UART
+    aliases:
+    - uart5
+  uart8:
+    type: UART
+    aliases:
+    - uart8
+  uart7:
+    type: UART
+    aliases:
+    - uart7
+  fdcan1:
+    type: FDCAN
+    aliases:
+    - fdcan1
+  fdcan2:
+    type: FDCAN
+    aliases:
+    - fdcan2
+  fdcan3:
+    type: FDCAN
+    aliases:
+    - fdcan3
+  ramfs:
+    type: RamFS
+    aliases:
+    - ramfs
+  terminal:
+    type: Terminal<32, 32, 5, 5>
+    aliases:
+    - terminal
+  pwm_tim3_ch4:
+    type: PWM
+    aliases:
+    - pwm_bmi088_heat
+    - pwm_tim3_ch4

@@ -1,0 +1,33 @@
+global_settings:
+  monitor_sleep_ms: 1000
+modules:
+- id: TestModule_0
+  name: TestModule
+  constructor_args: 
+    period_ms: 1000
+- id: bmi088
+  name: BMI088
+  constructor_args:3
+    gyro_freq: BMI088::GyroFreq::GYRO_2000HZ_BW532HZ
+    accl_freq: BMI088::AcclFreq::ACCL_1600HZ
+    gyro_range: BMI088::GyroRange::DEG_2000DPS
+    accl_range: BMI088::AcclRange::ACCL_24G
+    rotation:
+      w: 1.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    pid_param:
+      k: 1.0
+      p: 0.35
+      i: 0.0
+      d: 0.0
+      i_limit: 0.0
+      out_limit: 0.0
+      cycle: false
+    gyro_topic_name: bmi088_gyro
+    accl_topic_name: bmi088_accl
+    target_temperature: 45
+    task_stack_depth: 2048
+
+

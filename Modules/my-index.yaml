@@ -1,0 +1,4 @@
+namespace: yourns
+modules:
+- https://github.com/xrobot-org/BlinkLED.git
+mirror_of: xrobot-org

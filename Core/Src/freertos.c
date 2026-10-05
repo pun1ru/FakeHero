@@ -26,6 +26,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app_main.h"
+#include <stdbool.h>
 
 /* USER CODE END Includes */
 
@@ -52,7 +54,7 @@
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 3192 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -87,11 +89,22 @@ return 0;
 /* USER CODE END 1 */
 
 /* USER CODE BEGIN 4 */
+/* Name of the task that overflowed its stack; readable from a debugger once
+ * the CPU is stopped in the loop below.  Never print from this hook: it runs
+ * inside the PendSV (context switch) exception, so any blocking LibXR call
+ * (STDIO mutex, queue, ...) triggers a FreeRTOS configASSERT and turns the
+ * overflow into a silent, uninterruptible deadlock. */
+volatile const char *g_stack_overflow_task = 0;
+
 void vApplicationStackOverflowHook(xTaskHandle xTask, char *pcTaskName)
 {
    /* Run time stack overflow checking is performed if
    configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
    called if a stack overflow is detected. */
+   (void)xTask;
+   g_stack_overflow_task = pcTaskName;
+   taskDISABLE_INTERRUPTS();
+   for (;;) { }
 }
 /* USER CODE END 4 */
 
@@ -169,6 +182,7 @@ void StartDefaultTask(void *argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
+  app_main();
   /* Infinite loop */
   for(;;)
   {

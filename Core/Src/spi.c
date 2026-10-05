@@ -28,6 +28,7 @@ SPI_HandleTypeDef hspi2;
 SPI_HandleTypeDef hspi6;
 DMA_HandleTypeDef hdma_spi2_rx;
 DMA_HandleTypeDef hdma_spi2_tx;
+DMA_HandleTypeDef hdma_spi6_tx;
 
 /* SPI2 init function */
 void MX_SPI2_Init(void)
@@ -87,9 +88,9 @@ void MX_SPI6_Init(void)
   hspi6.Init.Direction = SPI_DIRECTION_2LINES_TXONLY;
   hspi6.Init.DataSize = SPI_DATASIZE_8BIT;
   hspi6.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi6.Init.CLKPhase = SPI_PHASE_2EDGE;
+  hspi6.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi6.Init.NSS = SPI_NSS_SOFT;
-  hspi6.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+  hspi6.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi6.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi6.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi6.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -239,6 +240,27 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     GPIO_InitStruct.Alternate = GPIO_AF8_SPI6;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+    /* SPI6 DMA Init */
+    /* SPI6_TX Init */
+    hdma_spi6_tx.Instance = BDMA_Channel0;
+    hdma_spi6_tx.Init.Request = BDMA_REQUEST_SPI6_TX;
+    hdma_spi6_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    hdma_spi6_tx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_spi6_tx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_spi6_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_spi6_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_spi6_tx.Init.Mode = DMA_NORMAL;
+    hdma_spi6_tx.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    if (HAL_DMA_Init(&hdma_spi6_tx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    __HAL_LINKDMA(spiHandle,hdmatx,hdma_spi6_tx);
+
+    /* SPI6 interrupt Init */
+    HAL_NVIC_SetPriority(SPI6_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(SPI6_IRQn);
   /* USER CODE BEGIN SPI6_MspInit 1 */
 
   /* USER CODE END SPI6_MspInit 1 */
@@ -289,6 +311,11 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
     */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_5|GPIO_PIN_7);
 
+    /* SPI6 DMA DeInit */
+    HAL_DMA_DeInit(spiHandle->hdmatx);
+
+    /* SPI6 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(SPI6_IRQn);
   /* USER CODE BEGIN SPI6_MspDeInit 1 */
 
   /* USER CODE END SPI6_MspDeInit 1 */

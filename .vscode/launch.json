@@ -1,0 +1,76 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // DAPLink( CMSIS-DAP ) + OpenOCD：按 F5 编译并开始调试
+      "type": "stgdbtarget",
+      "request": "launch",
+      "name": "DAPLink: 调试 NewDM (OpenOCD)",
+      "origin": "snippet",
+      "cwd": "${workspaceFolder}",
+
+      // 不想让它自动编译就把这行删掉，改成手动 cmake --build --preset Debug
+      "preBuild": "${command:st-stm32-ide-debug-launch.build}",
+
+      "gdb": "C:\\Users\\liaoz\\AppData\\Local\\stm32cube\\bundles\\gnu-gdb-for-stm32\\14.3.1+st.2\\bin\\arm-none-eabi-gdb.exe",
+      "program": "${workspaceFolder}/build/Debug/NewDM.elf",
+      "deviceName": "STM32H723VG",
+      "deviceCore": "Cortex-M7",
+      "deviceTrustzone": "TZ-disabled",
+
+      // 注意：扩展内部是 spawn(path.join(serverCwd, serverExe))
+      // 所以 serverCwd 必须是「目录」，serverExe 必须是「相对文件名」，
+      // 这里不能写绝对路径，否则会被拼成 ...\NewDM\C:\...\openocd.exe -> ENOENT
+      "serverExe": "openocd.exe",
+      "serverCwd": "C:\\ProgramData\\chocolatey\\lib\\openocd\\tools\\install\\bin",
+      "serverParameters": [
+        "-s", "C:\\ProgramData\\chocolatey\\lib\\openocd\\tools\\install\\share\\openocd\\scripts",
+        "-f", "interface/cmsis-dap.cfg",
+        "-f", "target/stm32h7x.cfg",
+        "-c", "gdb_port 3333"
+      ],
+      "serverHost": "localhost",
+      "serverPort": "3333",
+
+      "runEntry": "main",
+      "imagesAndSymbols": [
+        {
+          "imageFileName": "${workspaceFolder}/build/Debug/NewDM.elf",
+          "imageOffset": "",
+          "symbolFileName": "${workspaceFolder}/build/Debug/NewDM.elf",
+          "symbolOffset": ""
+        }
+      ],
+
+      // 扩展的构建/工具链需要这个变量；你系统里没持久化设置，所以在这里给上
+      "environment": {
+        "CUBE_BUNDLE_PATH": "C:\\Users\\liaoz\\AppData\\Local\\stm32cube\\bundles"
+      }
+    },
+    {
+      // 先自己在终端跑：openocd -f interface/cmsis-dap.cfg -f target/stm32h7x.cfg
+      // 再用这个挂上去，不重新烧录
+      "type": "stgdbtarget",
+      "request": "attach",
+      "name": "DAPLink: 附加到已运行的 OpenOCD (localhost:3333)",
+      "origin": "snippet",
+      "cwd": "${workspaceFolder}",
+      "gdb": "C:\\Users\\liaoz\\AppData\\Local\\stm32cube\\bundles\\gnu-gdb-for-stm32\\14.3.1+st.2\\bin\\arm-none-eabi-gdb.exe",
+      "program": "${workspaceFolder}/build/Debug/NewDM.elf",
+      "deviceName": "STM32H723VG",
+      "deviceCore": "Cortex-M7",
+      "deviceTrustzone": "TZ-disabled",
+      "serverHost": "localhost",
+      "serverPort": "3333",
+      "runEntry": "main",
+      "imagesAndSymbols": [
+        {
+          "imageFileName": "${workspaceFolder}/build/Debug/NewDM.elf",
+          "imageOffset": "",
+          "symbolFileName": "${workspaceFolder}/build/Debug/NewDM.elf",
+          "symbolOffset": ""
+        }
+      ]
+    }
+  ]
+}

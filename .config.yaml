@@ -26,6 +26,15 @@ Peripherals:
           PWM: true
           Complementary: false
           DutyCycle: null
+    TIM3:
+      Period: 1000-1
+      Prescaler: 1000-1
+      Channels:
+        CH4:
+          Label: PB1
+          PWM: true
+          Complementary: false
+          DutyCycle: null
   ADC: {}
   SPI:
     SPI2:
@@ -65,9 +74,25 @@ Peripherals:
       DMA_TX: ENABLE
       DMA_TX_TYPE: DMA
     SPI6:
-      BaudRate: 7.5 MBits/s
+      BaudRate: 15.0 MBits/s
       Direction: SPI_DIRECTION_2LINES_TXONLY
-      CLKPhase: SPI_PHASE_2EDGE
+      CLKPhase: SPI_PHASE_1EDGE
+      dma:
+        dma_tx: &id017
+          request_id: '0'
+          peripheral: SPI6_TX
+          dma_type: BDMA
+          stream: BDMA_Channel0
+          direction: PERIPH
+          periph_inc: false
+          mem_inc: false
+          periph_align: byte
+          mem_align: byte
+          mode: Normal
+          priority: High
+          direction_full: memory_to_periph
+      DMA_TX: ENABLE
+      DMA_TX_TYPE: BDMA
   USART:
     USART1:
       Mode: Asynchronous
@@ -331,6 +356,12 @@ Peripherals:
       ExtFilters: 0
       BaudRate: '1000000'
   USB:
+    USB_OTG_HS:
+      IPParameters:
+      - VirtualMode-Device_Only_FS
+      profiles:
+        Device_Only_FS:
+          VirtualMode: Device_Only_FS
     USB_DEVICE:
       CLASS_NAME_HS: CDC
       IPParameters:
@@ -339,12 +370,6 @@ Peripherals:
       - CLASS_NAME_HS
       VirtualMode: Cdc
       VirtualModeHS: Cdc_HS
-    USB_OTG_HS:
-      IPParameters:
-      - VirtualMode-Device_Only_FS
-      profiles:
-        Device_Only_FS:
-          VirtualMode: Device_Only_FS
   I2C: {}
 DMA:
   Requests:
@@ -364,6 +389,7 @@ DMA:
     Dma.Request7: UART5_TX
     Dma.Request8: UART7_RX
     Dma.Request9: UART7_TX
+    Bdma.Request0: SPI6_TX
   Configurations:
     SPI2_RX_12: *id001
     SPI2_TX_13: *id002
@@ -381,6 +407,7 @@ DMA:
     USART3_TX_5: *id014
     USART6_RX_14: *id015
     USART6_TX_15: *id016
+    SPI6_TX_0: *id017
 Timebase:
   Source: TIM1
   IRQ: TIM1_UP_IRQn
@@ -396,7 +423,7 @@ FreeRTOS:
   Tasks:
     defaultTask:
       Priority: '24'
-      StackSize: 128B
+      StackSize: 3192B
       EntryFunction: StartDefaultTask
       Type: Default
   Heap: null
