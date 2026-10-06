@@ -2,6 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "emberprobe",
+      "request": "launch",
+      "name": "EmberProbe: 调试 NewDM (OpenOCD)",
+      "executable": "${workspaceFolder}/build/Debug/NewDM.elf",
+      "runToEntryPoint": "main"
+    },
+    {
       // DAPLink( CMSIS-DAP ) + OpenOCD：按 F5 编译并开始调试
       "type": "stgdbtarget",
       "request": "launch",

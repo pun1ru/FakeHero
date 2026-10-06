@@ -14,5 +14,6 @@
         "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-g++*"
     ],
     "stm32cube-ide-build-cmake.ignoreCubeProjectDiscovery": false,
+    "emberprobe.armToolchainPath": "C:/Users/liaoz/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin",
     "orbit.defaultProgram": "e:\\Embedded\\STM32project\\NewDM\\build\\Debug\\NewDM.elf"
 }

@@ -1,4 +1,10 @@
-namespace: yourns
+namespace: 3SE-xrobot-dev
 modules:
-- https://github.com/xrobot-org/BlinkLED.git
-mirror_of: xrobot-org
+- https://github.com/3SE-xrobot-dev/CMD.git
+- https://github.com/3SE-xrobot-dev/DR16.git
+- https://github.com/3SE-xrobot-dev/VT13.git
+- https://github.com/3SE-xrobot-dev/Referee.git
+- https://github.com/3SE-xrobot-dev/Motor.git
+- https://github.com/3SE-xrobot-dev/DMMotor.git
+- https://github.com/3SE-xrobot-dev/RMMotor.git
+- https://github.com/3SE-xrobot-dev/LKMotor.git

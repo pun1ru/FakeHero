@@ -1,4 +1,6 @@
 sources:
+- url: https://raw.githubusercontent.com/3SE-xrobot-dev/modules-index/main/index.yaml
+  priority: 10
 - url: https://xrobot-org.github.io/xrobot-modules/index.yaml
   priority: 0
 - url: https://qdu-robomaster.github.io/qdu-future-modules/index.yaml
