@@ -2,7 +2,7 @@
 
 /* clang-format off */
 /* === MODULE MANIFEST V2 ===
-module_description: 控制命令中枢：汇总遥控器与上位机输入，发布底盘、云台、发射命令 / Control command hub that merges remote-controller and host inputs and publishes chassis, gimbal and launcher commands
+module_description: 控制命令中枢：汇总遥控器与上位机输入，发布底盘、云台、摩擦轮和拨盘命令 / Control command hub for chassis, gimbal, shooter and stir commands
 depends: []
 === END MANIFEST === */
 /* clang-format on */
@@ -16,9 +16,9 @@ depends: []
 #include "mutex.hpp"
 
 /**
- * @brief 控制命令中枢：汇总遥控器与上位机输入，发布底盘、云台、发射命令。
+ * @brief 控制命令中枢：汇总遥控器与上位机输入，发布底盘、云台、摩擦轮和拨盘命令。
  *        Control command hub that merges remote-controller and host inputs and publishes
- *        chassis, gimbal and launcher commands.
+ *        chassis, gimbal, shooter and stir commands.
  */
 class CMD
 {
@@ -56,17 +56,6 @@ class CMD
   };
 
   /**
-   * @brief 底盘自定义模式。
-   *        Chassis custom mode.
-   */
-  enum class ChasStat : int8_t
-  {
-    NONE = 0,     ///< 无模式 No mode
-    BOOST = 1,    ///< 加速 Boost
-    STRETCH = 2,  ///< 伸腿 Leg stretch
-  };
-
-  /**
    * @brief 底盘命令。
    *        Chassis command.
    */
@@ -75,7 +64,6 @@ class CMD
     float x;  ///< X 轴方向控制量 Control value along the X axis
     float y;  ///< Y 轴方向控制量 Control value along the Y axis
     float z;  ///< Z 轴方向控制量（旋转）Control value around the Z axis (rotation)
-    ChasStat self_define;  ///< 自定义模式 Custom mode
   } ChassisCMD;
 
   /**
@@ -96,13 +84,22 @@ class CMD
   } GimbalCMD;
 
   /**
-   * @brief 发射命令。
-   *        Launcher command.
+   * @brief 摩擦轮命令。
+   *        Friction-wheel command.
    */
   typedef struct
   {
-    bool isfire;  ///< 是否开火 Whether to fire
-  } LauncherCMD;
+    bool isfric;  ///< 摩擦轮开关 Friction-wheel enable
+  } ShooterCMD;
+
+  /**
+   * @brief 拨盘命令。
+   *        Stir command.
+   */
+  typedef struct
+  {
+    bool isfire;  ///< 是否拨弹 Whether to feed a projectile
+  } StirCMD;
 
   /**
    * @brief 一个控制源的完整命令数据。
@@ -110,11 +107,14 @@ class CMD
    */
   typedef struct
   {
-    GimbalCMD gimbal;      ///< 云台命令 Gimbal command
-    ChassisCMD chassis;    ///< 底盘命令 Chassis command
-    LauncherCMD launcher;  ///< 发射命令 Launcher command
+    GimbalCMD gimbal;    ///< 云台命令 Gimbal command
+    ChassisCMD chassis;  ///< 底盘命令 Chassis command
+    ShooterCMD shooter;  ///< 摩擦轮命令 Shooter command
+    StirCMD stir;        ///< 拨盘命令 Stir command
     bool chassis_online;  ///< 底盘命令有效 Chassis command valid (online)
     bool gimbal_online;   ///< 云台命令有效 Gimbal command valid (online)
+    bool shooter_online;  ///< 摩擦轮命令有效 Shooter command valid
+    bool stir_online;     ///< 拨盘命令有效 Stir command valid
     ControlSource ctrl_source;  ///< 控制源 Control source
   } Data;
 
@@ -239,8 +239,8 @@ class CMD
   }
 
   /**
-   * @brief 构造 CMD，创建三路命令 Topic 并注册控制模式事件。
-   *        Construct CMD, create the three command Topics and register the control mode
+   * @brief 构造 CMD，创建四路命令 Topic 并注册控制模式事件。
+   *        Construct CMD, create the four command Topics and register the control mode
    *        events.
    *
    * @param mode 初始控制模式，默认为操作手控制。
@@ -249,20 +249,25 @@ class CMD
    *                               Name of the chassis command Topic.
    * @param gimbal_cmd_topic_name 云台命令 Topic 名称。
    *                              Name of the gimbal command Topic.
-   * @param launcher_cmd_topic_name 发射命令 Topic 名称。
-   *                                Name of the launcher command Topic.
+   * @param shooter_cmd_topic_name 摩擦轮命令 Topic 名称。
+   *                               Name of the shooter command Topic.
+   * @param stir_cmd_topic_name 拨盘命令 Topic 名称。
+   *                            Name of the stir command Topic.
    */
   CMD(Mode mode = CMD::Mode::CMD_OP_CTRL,
       const char* chassis_cmd_topic_name = "chassis_cmd",
       const char* gimbal_cmd_topic_name = "gimbal_cmd",
-      const char* launcher_cmd_topic_name = "launcher_cmd")
+      const char* shooter_cmd_topic_name = "shooter_cmd",
+      const char* stir_cmd_topic_name = "stir_cmd")
       : mode_(mode),
         chassis_data_tp_(
             LibXR::Topic::CreateTopic<ChassisCMD>(chassis_cmd_topic_name, nullptr, true)),
         gimbal_data_tp_(
             LibXR::Topic::CreateTopic<GimbalCMD>(gimbal_cmd_topic_name, nullptr, true)),
-        fire_data_tp_(LibXR::Topic::CreateTopic<LauncherCMD>(launcher_cmd_topic_name,
-                                                             nullptr, true))
+        shooter_data_tp_(LibXR::Topic::CreateTopic<ShooterCMD>(
+            shooter_cmd_topic_name, nullptr, true)),
+        stir_data_tp_(
+            LibXR::Topic::CreateTopic<StirCMD>(stir_cmd_topic_name, nullptr, true))
   {
     // 创建事件回调函数
     auto callback = LibXR::Callback<uint32_t>::Create(
@@ -317,7 +322,8 @@ class CMD
   struct Output {
     ChassisCMD chassis{};
     GimbalCMD gimbal{};
-    LauncherCMD launcher{};
+    ShooterCMD shooter{};
+    StirCMD stir{};
     uint32_t event = 0;
   };
 
@@ -333,7 +339,8 @@ class CMD
       rc_input_seq_{};  ///< 各遥控输入源的数据序号 Sequence number of each RC input source
   LibXR::Topic chassis_data_tp_;  ///< 底盘命令 Topic Chassis command Topic
   LibXR::Topic gimbal_data_tp_;  ///< 云台命令 Topic Gimbal command Topic
-  LibXR::Topic fire_data_tp_;  ///< 发射命令 Topic Launcher command Topic
+  LibXR::Topic shooter_data_tp_;  ///< 摩擦轮命令 Topic Shooter command Topic
+  LibXR::Topic stir_data_tp_;     ///< 拨盘命令 Topic Stir command Topic
   LibXR::Topic host_euler_data_tp_;  ///< 上位机欧拉角 Topic Host Euler angle Topic
   RCInputSource active_rc_input_ =
       RCInputSource::RC_INPUT_DR16;  ///< 当前活动遥控输入源 Active remote-controller input source
@@ -351,7 +358,7 @@ class CMD
            std::fabs(rc_data.gimbal.yaw) > RC_ACTIVITY_EPS ||
            std::fabs(rc_data.gimbal.pit) > RC_ACTIVITY_EPS ||
            std::fabs(rc_data.gimbal.rol) > RC_ACTIVITY_EPS ||
-           (rc_data.chassis.self_define != ChasStat::NONE) || rc_data.launcher.isfire;
+           rc_data.shooter.isfric || rc_data.stir.isfire;
   }
 
   static Data MakeOfflineRCData()
@@ -359,6 +366,8 @@ class CMD
     Data rc_data{};
     rc_data.chassis_online = false;
     rc_data.gimbal_online = false;
+    rc_data.shooter_online = false;
+    rc_data.stir_online = false;
     rc_data.ctrl_source = ControlSource::CTRL_SOURCE_RC;
     return rc_data;
   }
@@ -428,15 +437,24 @@ class CMD
 
     if (this->mode_ == Mode::CMD_OP_CTRL)
     {
-      output.gimbal = rc_data.gimbal;
-      output.chassis = rc_data.chassis;
-      output.launcher = rc_data.launcher;
+      output.gimbal = rc_data.gimbal_online ? rc_data.gimbal : GimbalCMD{};
+      output.chassis = rc_data.chassis_online ? rc_data.chassis : ChassisCMD{};
+      output.shooter = rc_data.shooter_online ? rc_data.shooter : ShooterCMD{};
+      output.stir = rc_data.stir_online ? rc_data.stir : StirCMD{};
     }
     else
     {
-      output.chassis = ai_data.chassis_online ? ai_data.chassis : rc_data.chassis;
-      output.gimbal = ai_data.gimbal_online ? ai_data.gimbal : rc_data.gimbal;
-      output.launcher.isfire = ai_data.launcher.isfire && rc_data.launcher.isfire;
+      output.chassis = ai_data.chassis_online ? ai_data.chassis
+                                             : (rc_data.chassis_online ? rc_data.chassis
+                                                                       : ChassisCMD{});
+      output.gimbal = ai_data.gimbal_online ? ai_data.gimbal
+                                           : (rc_data.gimbal_online ? rc_data.gimbal
+                                                                    : GimbalCMD{});
+      output.shooter = ai_data.shooter_online
+                           ? ai_data.shooter
+                           : (rc_data.shooter_online ? rc_data.shooter : ShooterCMD{});
+      output.stir.isfire = ai_data.stir_online && rc_data.stir_online &&
+                           ai_data.stir.isfire && rc_data.stir.isfire;
     }
     return output;
   }
@@ -446,6 +464,7 @@ class CMD
     if (output.event != 0) this->cmd_event_.Active(output.event);
     this->gimbal_data_tp_.Publish(output.gimbal);
     this->chassis_data_tp_.Publish(output.chassis);
-    this->fire_data_tp_.Publish(output.launcher);
+    this->shooter_data_tp_.Publish(output.shooter);
+    this->stir_data_tp_.Publish(output.stir);
   }
 };

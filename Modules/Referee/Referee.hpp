@@ -2509,9 +2509,10 @@ class Referee
     cmd_data.gimbal.yaw = -static_cast<float>(rc.mouse_x) * MOUSE_SCALER;
     cmd_data.gimbal.rol = 0.0f;
 
-    cmd_data.launcher.isfire = (rc.button_l != 0);
+    cmd_data.stir.isfire = (rc.button_l != 0);
     cmd_data.chassis_online = true;
     cmd_data.gimbal_online = true;
+    cmd_data.stir_online = true;
     cmd_data.ctrl_source = CMD::ControlSource::CTRL_SOURCE_RC;
     cmd_->FeedRC(cmd_data);
   }

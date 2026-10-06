@@ -345,6 +345,7 @@ class RMMotor : public Motor
   Param param_;                   ///< 构造参数副本 Copy of the construction parameters
   ConfigParam config_param_{};    ///< 反馈与控制 ID Feedback and control IDs
   Motor::Feedback feedback_{};    ///< 最近一次解码的反馈 Latest decoded feedback
+  bool angle_initialized_ = false;
   uint16_t no_response_count_{};  ///< 连续无反馈计数 Consecutive calls without feedback
 
   LibXR::CAN* can_;        ///< 所在 CAN 总线 CAN bus of the motor
@@ -433,7 +434,17 @@ class RMMotor : public Motor
       feedback_.velocity = static_cast<float>(raw_velocity);
     }
 
-    feedback_.abs_angle = LibXR::CycleValue<float>(feedback_.position);
+    const LibXR::CycleValue<float> angle(feedback_.position);
+    if (angle_initialized_)
+    {
+      feedback_.multi_turn_angle += angle - feedback_.abs_angle;
+    }
+    else
+    {
+      feedback_.multi_turn_angle = feedback_.position;
+      angle_initialized_ = true;
+    }
+    feedback_.abs_angle = angle;
     feedback_.omega = feedback_.velocity * (static_cast<float>(LibXR::TWO_PI) / 60.0f);
     feedback_.torque = reverse_flag_ *
                        static_cast<float>(raw_current) * KGetTorque() *

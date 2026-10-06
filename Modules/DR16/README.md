@@ -9,14 +9,14 @@ DR16 遥控接收机解析模块：从 UART 接收 DBUS 数据并转换为 CMD �
 
 ## 1. 模块作用 / Purpose
 
-构造时，DR16 把 UART 配置为 100000 bit/s、8E2（旧 Hero 配置，停止位可调），并创建线程 `uart_dr16`（栈深与优先级见 `Param`）。线程每 5 ms 读取一帧 18 字节的 DBUS 数据，读超时 4 ms。四个摇杆通道超出 364 至 1684，或任一拨杆值为 0 时，该帧被丢弃；有效帧转换为 `CMD::Data`，通过 `cmd.FeedRC(CMD::RCInputSource::RC_INPUT_DR16, ...)` 提交给 CMD。超过 100 ms 没有有效帧时判定为离线，此后每个周期向 CMD 提交控制量全零、`chassis_online` 与 `gimbal_online` 为 `false` 的数据。
+构造时，DR16 把 UART 配置为 100000 bit/s、8E2（旧 Hero 配置，停止位可调），并创建线程 `uart_dr16`（栈深与优先级见 `Param`）。线程每 5 ms 读取一帧 18 字节的 DBUS 数据，读超时 4 ms。四个摇杆通道超出 364 至 1684，或任一拨杆值为 0 时，该帧被丢弃；有效帧转换为 `CMD::Data`，通过 `cmd.FeedRC(CMD::RCInputSource::RC_INPUT_DR16, ...)` 提交给 CMD。超过 100 ms 没有有效帧时判定为离线，提交四路命令均无效的零数据。
 
 转换到 `CMD::Data` 的映射如下：
 
 - 底盘：`x` 为左摇杆 X，`y` 为左摇杆 Y，`z` 为右摇杆 X 取反，均归一化到 [-1, 1]；键盘 A / D 在 `x` 上减 / 加 1，S / W 在 `y` 上减 / 加 1；结果限幅到 [-1, 1]。
 - 云台：`yaw` 为右摇杆 X 取反再减去鼠标 X × 20/32768，`pit` 为右摇杆 Y 加上鼠标 Y × 20/32768。
-- 底盘模式：Shift 按下或拨轮（`res`）为最大值 1684 时为 `BOOST`；C 按下或拨轮为最小值 364 时为 `STRETCH`，`STRETCH` 优先。
-- 开火：拨轮为最小值 364 或鼠标左键按下。
+- 摩擦轮：F 键上升沿或左拨杆切到上位时翻转 `shooter.isfric`；离线时关闭。
+- 拨盘：拨轮为最小值 364 或鼠标左键按下时 `stir.isfire` 为真。
 
 `GetEvent()` 返回 DR16 的 `LibXR::Event`，EventBinder 等模块用它绑定下列事件 ID：
 
@@ -30,8 +30,8 @@ The mapping to `CMD::Data` is:
 
 - Chassis: `x` is the left stick X, `y` is the left stick Y and `z` is the negated right stick X, all normalized to [-1, 1]; keyboard A / D subtract / add 1 on `x` and S / W subtract / add 1 on `y`; the results are clamped to [-1, 1].
 - Gimbal: `yaw` is the negated right stick X minus the mouse X × 20/32768, and `pit` is the right stick Y plus the mouse Y × 20/32768.
-- Chassis mode: `BOOST` when Shift is pressed or the wheel (`res`) is at its maximum 1684; `STRETCH` when C is pressed or the wheel is at its minimum 364, with `STRETCH` taking priority.
-- Fire: the wheel is at its minimum 364 or the left mouse button is pressed.
+- Shooter: the F key rising edge or left switch entering its top position toggles `shooter.isfric`; offline resets it.
+- Stir: the wheel at its minimum 364 or the left mouse button sets `stir.isfire`.
 
 `GetEvent()` returns the `LibXR::Event` of DR16, to which Modules such as EventBinder bind the following event IDs:
 

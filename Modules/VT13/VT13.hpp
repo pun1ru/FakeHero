@@ -597,28 +597,13 @@ class VT13
         output_data.chassis.y += 1.0f;
       }
 
-      if (curr_rc.key & RawValue(Key::KEY_SHIFT))
-      {
-        output_data.chassis.self_define = CMD::ChasStat::BOOST;
-      }
-      else
-      {
-        output_data.chassis.self_define = CMD::ChasStat::NONE;
-      }
       output_data.chassis.z = 0.0f;
 
       output_data.gimbal.pit = static_cast<float>(curr_rc.y) * MOUSE_SCALER;
       output_data.gimbal.yaw = static_cast<float>(curr_rc.x) * MOUSE_SCALER;
       output_data.gimbal.rol = 0.0f;
 
-      if (curr_rc.press_l != 0)
-      {
-        output_data.launcher.isfire = true;
-      }
-      else
-      {
-        output_data.launcher.isfire = false;
-      }
+      output_data.stir.isfire = curr_rc.press_l != 0;
     }
     else
     {
@@ -632,8 +617,6 @@ class VT13
       output_data.chassis.z = 2.0f *
                               (static_cast<float>(curr_rc.ch_r_x) - VT13_CH_VALUE_MID) *
                               INV_FULL_RANGE;
-      output_data.chassis.self_define = CMD::ChasStat::NONE;
-
       output_data.gimbal.yaw = 2.0f *
                                (static_cast<float>(curr_rc.ch_r_x) - VT13_CH_VALUE_MID) *
                                INV_FULL_RANGE;
@@ -642,18 +625,14 @@ class VT13
                                INV_FULL_RANGE;
       output_data.gimbal.rol = 0.0f;
 
-      if (curr_rc.trig != 0)
-      {
-        output_data.launcher.isfire = true;
-      }
-      else
-      {
-        output_data.launcher.isfire = false;
-      }
+      output_data.stir.isfire = curr_rc.trig != 0;
     }
 
+    output_data.shooter.isfric = this->fric_enable_;
     output_data.chassis_online = true;
     output_data.gimbal_online = true;
+    output_data.shooter_online = true;
+    output_data.stir_online = true;
     output_data.ctrl_source = CMD::ControlSource::CTRL_SOURCE_RC;
 
     this->last_data_ = curr_rc;
@@ -671,16 +650,17 @@ class VT13
     this->cmd_data_.chassis.x = 0;
     this->cmd_data_.chassis.y = 0;
     this->cmd_data_.chassis.z = 0;
-    this->cmd_data_.chassis.self_define = CMD::ChasStat::NONE;
-
     this->cmd_data_.gimbal.yaw = 0;
     this->cmd_data_.gimbal.pit = 0;
     this->cmd_data_.gimbal.rol = 0;
 
-    this->cmd_data_.launcher.isfire = false;
+    this->cmd_data_.shooter.isfric = false;
+    this->cmd_data_.stir.isfire = false;
 
     this->cmd_data_.chassis_online = false;
     this->cmd_data_.gimbal_online = false;
+    this->cmd_data_.shooter_online = false;
+    this->cmd_data_.stir_online = false;
 
     this->gimbal_enable_ = false;
     this->fric_enable_ = false;

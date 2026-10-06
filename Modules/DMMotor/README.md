@@ -5,20 +5,17 @@ at `990cac842576268fe3a267faa82c3f543611ec54` (Apache-2.0). Upstream
 CLI examples below retain the QDU namespace; this repository is published at
 https://github.com/3SE-xrobot-dev/DMMotor.
 
-For old Hero MIT scaling select `MOTOR_HERO_DOWN` (position +/-3.14 rad,
-velocity +/-30 rad/s, torque +/-11 N m) or `MOTOR_HERO_UP` (position +/-12.5
-rad with the same velocity and torque ranges). The legacy lower-board stirring
-motor uses command ID `0x108` and feedback ID `0x018`; set
-`Param.feedback_id = 0x018` for it. Other Hero DM motors keep the default
+The legacy lower-board stirring motor uses command ID `0x108` and feedback ID
+`0x018`; set `Param.feedback_id = 0x018` for it. Other DM motors use the default
 `0x10 + can_id` feedback mapping.
 
-达妙（DM）电机 CAN 驱动模块，支持 DM4310 与 DM8009 / CAN driver Module for Damiao (DM) motors, supporting the DM4310 and DM8009
+达妙（DM）电机 CAN 驱动模块，支持 DM4310、DM4340、DM6006 与 DM8009 / CAN driver Module for Damiao (DM) motors, supporting DM4310, DM4340, DM6006 and DM8009
 
 ## 1. 模块作用 / Purpose
 
 DMMotor 封装达妙 CAN 协议并实现 `Motor` 抽象接口。构造时在 CAN 总线上注册一个标准帧回调，接收 ID 为 `0x10 + can_id` 的反馈帧；接收队列深度为 1，队列满时丢弃旧帧，只保留最新一帧。
 
-`Update()` 取出并解码反馈：`position`（rad）、`omega`（rad/s）、`velocity`（rpm，由 `omega` 换算）、`torque`（N·m）、`temp`（帧内两路温度的较大值）、`error_id`（帧首字节低 4 位）与 `state`（帧首字节高 4 位）；`abs_angle` 取 `position`。`reverse = true` 时，反馈的 `position`、`velocity`、`omega`、`torque` 取反，下发的位置、速度与力矩也取反。
+`Update()` 取出并解码反馈：`position`（rad）、`omega`（rad/s）、`velocity`（rpm，由 `omega` 换算）、`torque`（N·m）、`temp`（帧内两路温度的较大值）、`error_id`（帧首字节低 4 位）与 `state`（帧首字节高 4 位）；`abs_angle` 取 `position`，`multi_turn_angle` 按型号位置量程的跨界差值累计（rad）。`reverse = true` 时，反馈的 `position`、`velocity`、`omega`、`torque` 取反，下发的位置、速度与力矩也取反。
 
 所有控制帧以 `can_id` 为 ID 发送，`Control()` 按 `MotorCmd::mode` 处理：
 
@@ -38,7 +35,7 @@ MIT 与位置模式下，反馈温度超过 90 ℃ 时发送失能帧并输出 `
 
 DMMotor implements the `Motor` interface on top of the Damiao CAN protocol. Upon construction it registers a standard-frame callback on the CAN bus that receives feedback frames with ID `0x10 + can_id`. The receive queue has depth 1; when it is full the old frame is dropped, so only the latest frame is kept.
 
-`Update()` pops and decodes the feedback: `position` (rad), `omega` (rad/s), `velocity` (rpm, converted from `omega`), `torque` (N·m), `temp` (the larger of the two temperatures in the frame), `error_id` (low 4 bits of the first byte) and `state` (high 4 bits of the first byte); `abs_angle` takes the value of `position`. With `reverse = true`, the feedback `position`, `velocity`, `omega` and `torque` are negated, as are the position, velocity and torque that are sent.
+`Update()` pops and decodes the feedback: `position` (rad), `omega` (rad/s), `velocity` (rpm, converted from `omega`), `torque` (N·m), `temp` (the larger of the two temperatures in the frame), `error_id` (low 4 bits of the first byte) and `state` (high 4 bits of the first byte); `abs_angle` takes `position`, and `multi_turn_angle` accumulates deltas across the model position-range boundary in radians. With `reverse = true`, the feedback `position`, `velocity`, `omega` and `torque` are negated, as are the position, velocity and torque that are sent.
 
 All control frames are sent with `can_id` as the ID, and `Control()` handles `MotorCmd::mode` as follows:
 
@@ -63,6 +60,8 @@ Besides the `Motor` interface, the public interface includes `MITControl(pos, ve
 | 型号 | P_MAX (rad) | V_MAX (rad/s) | T_MAX (N·m) | KP | KD |
 | --- | --- | --- | --- | --- | --- |
 | `MOTOR_DM4310` | 6.283185 | 30 | 10 | 0 – 500 | 0 – 5 |
+| `MOTOR_DM4340` | 6.283185 | 30 | 10 | 0 – 500 | 0 – 5 |
+| `MOTOR_DM6006` | 6.283185 | 30 | 10 | 0 – 500 | 0 – 5 |
 | `MOTOR_DM8009` | 12.56637 | 45 | 54 | 0 – 500 | 0 – 5 |
 
 `MOTOR_NONE` 的各项量程均为 0。
@@ -72,6 +71,8 @@ Besides the `Motor` interface, the public interface includes `MITControl(pos, ve
 | Model | P_MAX (rad) | V_MAX (rad/s) | T_MAX (N·m) | KP | KD |
 | --- | --- | --- | --- | --- | --- |
 | `MOTOR_DM4310` | 6.283185 | 30 | 10 | 0 – 500 | 0 – 5 |
+| `MOTOR_DM4340` | 6.283185 | 30 | 10 | 0 – 500 | 0 – 5 |
+| `MOTOR_DM6006` | 6.283185 | 30 | 10 | 0 – 500 | 0 – 5 |
 | `MOTOR_DM8009` | 12.56637 | 45 | 54 | 0 – 500 | 0 – 5 |
 
 All ranges of `MOTOR_NONE` are 0.
@@ -82,7 +83,8 @@ All ranges of `MOTOR_NONE` are 0.
 DMMotor(LibXR::CAN& can_bus,
         const Param& param = {.model = DMMotor::Model::MOTOR_DM4310,
                               .reverse = false,
-                              .can_id = 1});
+                              .can_id = 1,
+                              .feedback_id = 0});
 ```
 
 依赖：
@@ -91,9 +93,10 @@ DMMotor(LibXR::CAN& can_bus,
 
 配置参数（`Param`）：
 
-- `model`：电机型号，`DMMotor::Model::MOTOR_DM4310`、`MOTOR_DM8009` 或 `MOTOR_NONE`，默认 `MOTOR_DM4310`。
+- `model`：电机型号，`DMMotor::Model::MOTOR_DM4310`、`MOTOR_DM4340`、`MOTOR_DM6006`、`MOTOR_DM8009` 或 `MOTOR_NONE`，默认 `MOTOR_DM4310`。
 - `reverse`：是否反向，默认 `false`。
-- `can_id`：电机控制 ID，默认 1；反馈 ID 为 `0x10 + can_id`。
+- `can_id`：电机控制 ID，默认 1。
+- `feedback_id`：反馈 ID，默认 0，即使用 `0x10 + can_id`；可设置为指定 ID。
 
 Dependencies:
 
@@ -101,9 +104,10 @@ Dependencies:
 
 Configuration parameters (`Param`):
 
-- `model`: motor model, `DMMotor::Model::MOTOR_DM4310`, `MOTOR_DM8009` or `MOTOR_NONE`, default `MOTOR_DM4310`.
+- `model`: motor model, `DMMotor::Model::MOTOR_DM4310`, `MOTOR_DM4340`, `MOTOR_DM6006`, `MOTOR_DM8009` or `MOTOR_NONE`, default `MOTOR_DM4310`.
 - `reverse`: whether the direction is reversed, default `false`.
-- `can_id`: motor control ID, default 1; the feedback ID is `0x10 + can_id`.
+- `can_id`: motor control ID, default 1; the feedback ID defaults to `0x10 + can_id` and can be set with `feedback_id`.
+- `feedback_id`: feedback frame ID, default 0 (use `0x10 + can_id`); set to an explicit ID if needed.
 
 ## 4. Topic
 
@@ -138,11 +142,11 @@ Other Modules (for example `QDU-Robomaster/Gimbal`) take the id of this instance
 - `QDU-Robomaster/Motor`：本模块实现的电机抽象接口。
 - LibXR。
 
-硬件：挂在 CAN 总线上的达妙电机（DM4310 或 DM8009），总线对象由 BSP 通过 `XR_REGISTER` 注册；电机的控制 ID 为 `can_id`，反馈帧 ID 为 `0x10 + can_id`。
+硬件：挂在 CAN 总线上的达妙电机（DM4310、DM4340、DM6006 或 DM8009），总线对象由 BSP 通过 `XR_REGISTER` 注册；电机的控制 ID 为 `can_id`，反馈帧 ID 默认为 `0x10 + can_id`。
 
 Dependencies:
 
 - `QDU-Robomaster/Motor`: the motor abstraction interface implemented by this Module.
 - LibXR.
 
-Hardware: a Damiao motor (DM4310 or DM8009) on a CAN bus whose object the BSP registers with `XR_REGISTER`; the motor control ID is `can_id` and the feedback frame ID is `0x10 + can_id`.
+Hardware: a Damiao motor (DM4310, DM4340, DM6006 or DM8009) on a CAN bus whose object the BSP registers with `XR_REGISTER`; the motor control ID is `can_id` and the feedback frame ID defaults to `0x10 + can_id`.

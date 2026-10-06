@@ -2,7 +2,7 @@
 
 // clang-format off
 /* === MODULE MANIFEST V2 ===
-module_description: LK CAN motor driver for Hero pitch axis
+module_description: LK classic CAN motor driver with protocol V2.36 feedback and control
 constructor_args: []
 template_args: []
 required_hardware: []
@@ -25,27 +25,44 @@ depends:
 
 class LKMotor : public Motor {
  public:
+  enum class OutputType : uint8_t { IQ, POWER };
+
+  struct Status1 {
+    float bus_voltage = 0.0f;
+    float bus_current = 0.0f;
+    uint8_t motor_state = 0;
+    uint8_t error_flags = 0;
+  };
+
   struct Param {
     uint8_t motor_id = 1;
     bool reverse = false;
     uint16_t zero_encoder = 0;
+    uint32_t encoder_counts_per_turn = 65536;
     float position_counts_per_degree = 100.0f;
     int32_t position_zero_count = 0;
     uint16_t max_speed_dps = 360;
     int16_t max_current_raw = 2000;
     float torque_nm_per_raw = 0.0f;
+    OutputType output_type = OutputType::IQ;
   };
 
   explicit LKMotor(LibXR::CAN& can) : LKMotor(can, Param{}) {}
 
   LKMotor(LibXR::CAN& can, const Param& param) : can_(&can), param_(param) {
-    const uint32_t id = 0x140u + param_.motor_id;
+    ASSERT(param_.motor_id >= 1 && param_.motor_id <= 32);
+    ASSERT(param_.encoder_counts_per_turn == 16384 ||
+           param_.encoder_counts_per_turn == 32768 ||
+           param_.encoder_counts_per_turn == 65536);
+    ASSERT(param_.zero_encoder < param_.encoder_counts_per_turn);
+    ASSERT(param_.max_current_raw > 0 && param_.max_current_raw <= 2048);
+    const uint32_t reply_id = 0x180u + param_.motor_id;
     auto callback = LibXR::CAN::Callback::Create(
         [](bool in_isr, LKMotor* self, const LibXR::CAN::ClassicPack& pack) {
           self->OnReceive(in_isr, pack);
         }, this);
     can_->Register(callback, LibXR::CAN::Type::STANDARD,
-                   LibXR::CAN::FilterMode::ID_RANGE, id, id);
+                   LibXR::CAN::FilterMode::ID_RANGE, reply_id, reply_id);
   }
 
   void Enable() override { Send(0x88); }
@@ -67,15 +84,22 @@ class LKMotor : public Motor {
   }
 
   const Feedback& GetFeedback() override { return feedback_; }
+  const Status1& GetStatus1() const { return status1_; }
   int16_t GetCurrentRaw() const { return current_raw_; }
+  int16_t GetPowerRaw() const { return power_raw_; }
+
+  void RequestStatus1() { Send(0x9A); }
+  void RequestStatus2() { Send(0x9C); }
 
   void Control(const MotorCmd& cmd) override {
     switch (cmd.mode) {
       case MODE_CURRENT:
-        CurrentControlNormalized(cmd.velocity);
+        if (param_.output_type == OutputType::IQ)
+          CurrentControlNormalized(cmd.velocity);
         break;
       case MODE_TORQUE:
-        if (param_.torque_nm_per_raw > 0.0f) {
+        if (param_.output_type == OutputType::IQ &&
+            param_.torque_nm_per_raw > 0.0f) {
           CurrentControlRaw(ClampI16(cmd.torque / param_.torque_nm_per_raw,
                                      param_.max_current_raw));
         }
@@ -92,6 +116,7 @@ class LKMotor : public Motor {
   }
 
   void CurrentControlRaw(int16_t current) {
+    if (param_.output_type != OutputType::IQ) return;
     const int16_t limited = std::clamp<int16_t>(current, -param_.max_current_raw,
                                                 param_.max_current_raw);
     const uint16_t raw = static_cast<uint16_t>(param_.reverse ? -limited : limited);
@@ -106,10 +131,23 @@ class LKMotor : public Motor {
                                param_.max_current_raw));
   }
 
+  // MS-series open-loop power command; the protocol range is [-850, 850].
+  void PowerControlRaw(int16_t power) {
+    if (param_.output_type != OutputType::POWER) return;
+    const int16_t limited = std::clamp<int16_t>(power, -850, 850);
+    const uint16_t raw = static_cast<uint16_t>(param_.reverse ? -limited : limited);
+    uint8_t data[8]{};
+    data[0] = 0xA0;
+    Put16(data + 4, raw);
+    Send(data);
+  }
+
   void SpeedControlRpm(float rpm) {
     const int32_t speed = ClampI32((param_.reverse ? -rpm : rpm) * 600.0f);
     uint8_t data[8]{};
     data[0] = 0xA2;
+    if (param_.output_type == OutputType::IQ)
+      Put16(data + 2, static_cast<uint16_t>(param_.max_current_raw));
     Put32(data + 4, static_cast<uint32_t>(speed));
     Send(data);
   }
@@ -138,6 +176,10 @@ class LKMotor : public Motor {
   static void Put16(uint8_t* out, uint16_t value) {
     out[0] = static_cast<uint8_t>(value);
     out[1] = static_cast<uint8_t>(value >> 8);
+  }
+
+  static uint16_t Read16(const uint8_t* data) {
+    return static_cast<uint16_t>(data[0] | (static_cast<uint16_t>(data[1]) << 8));
   }
 
   static void Put32(uint8_t* out, uint32_t value) {
@@ -181,36 +223,64 @@ class LKMotor : public Motor {
   void Decode(const LibXR::CAN::ClassicPack& pack) {
     if (pack.dlc != 8) return;
     const auto command = pack.data[0];
-    if (command == 0xA1 || command == 0xA2 || command == 0xA4 || command == 0xA6) {
+    if (command == 0x9A || command == 0x9B) {
+      feedback_.temp = static_cast<int8_t>(pack.data[1]);
+      status1_.bus_voltage = static_cast<int16_t>(Read16(pack.data + 2)) * 0.01f;
+      status1_.bus_current = static_cast<int16_t>(Read16(pack.data + 4)) * 0.01f;
+      status1_.motor_state = pack.data[6];
+      status1_.error_flags = pack.data[7];
+      feedback_.state = status1_.motor_state;
+      feedback_.error_id = status1_.error_flags;
+    } else if (command == 0x9C || (command >= 0xA0 && command <= 0xA8)) {
       constexpr float kDegToRad = 0.017453292519943295f;
-      const int16_t current = static_cast<int16_t>(
-          static_cast<uint16_t>(pack.data[2] | (pack.data[3] << 8)));
-      const int16_t rpm = static_cast<int16_t>(
-          static_cast<uint16_t>(pack.data[4] | (pack.data[5] << 8)));
-      const uint16_t encoder = static_cast<uint16_t>(pack.data[6] | (pack.data[7] << 8));
-      const int16_t relative = static_cast<int16_t>(encoder - param_.zero_encoder);
+      const int16_t output = static_cast<int16_t>(Read16(pack.data + 2));
+      const int16_t speed_dps = static_cast<int16_t>(Read16(pack.data + 4));
+      const uint16_t encoder = Read16(pack.data + 6);
+      if (encoder >= param_.encoder_counts_per_turn) return;
+      int32_t relative = static_cast<int32_t>(encoder) - param_.zero_encoder;
+      const int32_t counts = static_cast<int32_t>(param_.encoder_counts_per_turn);
+      if (relative < 0) relative += counts;
+      if (relative >= counts / 2) relative -= counts;
       const float sign = param_.reverse ? -1.0f : 1.0f;
-      current_raw_ = current;
-      feedback_.position = sign * relative * (360.0f / 65536.0f) * kDegToRad;
-      feedback_.abs_angle = feedback_.position;
-      feedback_.velocity = sign * rpm;
-      feedback_.omega = feedback_.velocity * 0.10471975511965977f;
-      feedback_.torque = sign * current * param_.torque_nm_per_raw;
-      feedback_.temp = pack.data[1];
-      feedback_.state = 1;
+      current_raw_ = param_.output_type == OutputType::IQ ? output : 0;
+      power_raw_ = param_.output_type == OutputType::POWER ? output : 0;
+      feedback_.position = sign * static_cast<float>(relative) *
+                           (static_cast<float>(LibXR::TWO_PI) /
+                            static_cast<float>(param_.encoder_counts_per_turn));
+      const LibXR::CycleValue<float> angle(feedback_.position);
+      if (angle_initialized_) {
+        feedback_.multi_turn_angle += angle - feedback_.abs_angle;
+      } else {
+        if (!multi_turn_seeded_) {
+          feedback_.multi_turn_angle = feedback_.position;
+        }
+        angle_initialized_ = true;
+      }
+      feedback_.abs_angle = angle;
+      feedback_.velocity = sign * static_cast<float>(speed_dps) / 6.0f;
+      feedback_.omega = sign * static_cast<float>(speed_dps) * kDegToRad;
+      feedback_.torque = sign * static_cast<float>(current_raw_) *
+                         param_.torque_nm_per_raw;
+      feedback_.temp = static_cast<int8_t>(pack.data[1]);
     } else if (command == 0x92) {
       uint64_t value = 0;
       for (uint8_t i = 1; i < 8; ++i) value |= uint64_t(pack.data[i]) << (8 * (i - 1));
       if (value & (uint64_t(1) << 55)) value |= 0xFF00000000000000ULL;
       const auto signed_value = static_cast<int64_t>(value);
-      feedback_.position = (param_.reverse ? -1.0f : 1.0f) *
-                           static_cast<float>(signed_value) * 0.0001745329252f;
+      feedback_.multi_turn_angle = (param_.reverse ? -1.0f : 1.0f) *
+                                   static_cast<float>(signed_value) * 0.0001745329252f;
+      angle_initialized_ = false;
+      multi_turn_seeded_ = true;
     }
   }
 
   LibXR::CAN* can_;
   Param param_;
   Feedback feedback_{};
+  Status1 status1_{};
+  bool angle_initialized_ = false;
+  bool multi_turn_seeded_ = false;
   int16_t current_raw_ = 0;
+  int16_t power_raw_ = 0;
   LibXR::MPMCQueue<LibXR::CAN::ClassicPack> recv_queue_{4};
 };

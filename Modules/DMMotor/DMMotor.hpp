@@ -1,7 +1,7 @@
 #pragma once
 // clang-format off
 /* === MODULE MANIFEST V2 ===
-module_description: 达妙（DM）电机 CAN 驱动模块，支持 DM4310 与 DM8009 / CAN driver Module for Damiao (DM) motors, supporting the DM4310 and DM8009
+module_description: 达妙（DM）电机 CAN 驱动模块，支持 DM4310、DM4340、DM6006 与 DM8009 / CAN driver Module for Damiao (DM) motors, supporting DM4310, DM4340, DM6006 and DM8009
 depends:
 - 3SE-xrobot-dev/Motor
 === END MANIFEST === */
@@ -26,6 +26,27 @@ depends:
 #define DM4310_KP_MAX (500.0f)
 #define DM4310_KD_MIN (0.0f)
 #define DM4310_KD_MAX (5.0f)
+
+
+// DM4340 量程：位置 (rad)、速度 (rad/s)、力矩 (N·m)、KP、KD
+// DM4340 ranges: position (rad), velocity (rad/s), torque (N·m), KP, KD
+#define DM4340_PMAX (6.283185f)
+#define DM4340_VMAX (30.0f)
+#define DM4340_TMAX (10.0f)
+#define DM4340_KP_MIN (0.0f)
+#define DM4340_KP_MAX (500.0f)
+#define DM4340_KD_MIN (0.0f)
+#define DM4340_KD_MAX (5.0f)
+
+// DM6006 量程：位置 (rad)、速度 (rad/s)、力矩 (N·m)、KP、KD
+// DM6006 ranges: position (rad), velocity (rad/s), torque (N·m), KP, KD
+#define DM6006_PMAX (6.283185f)
+#define DM6006_VMAX (30.0f)
+#define DM6006_TMAX (10.0f)
+#define DM6006_KP_MIN (0.0f)
+#define DM6006_KP_MAX (500.0f)
+#define DM6006_KD_MIN (0.0f)
+#define DM6006_KD_MAX (5.0f)
 
 // DM8009 量程：位置 (rad)、速度 (rad/s)、力矩 (N·m)、KP、KD
 // DM8009 ranges: position (rad), velocity (rad/s), torque (N·m), KP, KD
@@ -53,9 +74,9 @@ class DMMotor : public Motor
     MOTOR_NONE = 0,  ///< 未指定，各项量程为 0
                      ///< Unspecified, all ranges are 0
     MOTOR_DM4310,    ///< DM4310
+    MOTOR_DM4340,    ///< DM4340
+    MOTOR_DM6006,    ///< DM6006
     MOTOR_DM8009,    ///< DM8009
-    MOTOR_HERO_DOWN, ///< Legacy lower-board MIT scaling
-    MOTOR_HERO_UP,   ///< Legacy upper-board MIT scaling
   };
 
   /**
@@ -132,15 +153,23 @@ class DMMotor : public Motor
         lsb_.KP_MIN = DM8009_KP_MIN;
         lsb_.KP_MAX = DM8009_KP_MAX;
         break;
-      case Model::MOTOR_HERO_DOWN:
-      case Model::MOTOR_HERO_UP:
-        lsb_.P_MAX = param_.model == Model::MOTOR_HERO_DOWN ? 3.14f : 12.5f;
-        lsb_.V_MAX = 30.0f;
-        lsb_.T_MAX = 11.0f;
-        lsb_.KD_MIN = 0.0f;
-        lsb_.KD_MAX = 5.0f;
-        lsb_.KP_MIN = 0.0f;
-        lsb_.KP_MAX = 500.0f;
+      case Model::MOTOR_DM4340:
+        lsb_.P_MAX = DM4340_PMAX;
+        lsb_.V_MAX = DM4340_VMAX;
+        lsb_.T_MAX = DM4340_TMAX;
+        lsb_.KD_MIN = DM4340_KD_MIN;
+        lsb_.KD_MAX = DM4340_KD_MAX;
+        lsb_.KP_MIN = DM4340_KP_MIN;
+        lsb_.KP_MAX = DM4340_KP_MAX;
+        break;
+      case Model::MOTOR_DM6006:
+        lsb_.P_MAX = DM6006_PMAX;
+        lsb_.V_MAX = DM6006_VMAX;
+        lsb_.T_MAX = DM6006_TMAX;
+        lsb_.KD_MIN = DM6006_KD_MIN;
+        lsb_.KD_MAX = DM6006_KD_MAX;
+        lsb_.KP_MIN = DM6006_KP_MIN;
+        lsb_.KP_MAX = DM6006_KP_MAX;
         break;
       case Model::MOTOR_NONE:
         lsb_.P_MAX = 0;
@@ -152,6 +181,7 @@ class DMMotor : public Motor
         lsb_.KP_MAX = 0;
         break;
     }
+    if (lsb_.P_MAX == 0.0f) return;
     // 反馈帧 ID 为 0x10 + can_id
     uint16_t feedback_id_to_register =
         param_.feedback_id != 0 ? param_.feedback_id : 0x10 + param_.can_id;
@@ -170,6 +200,7 @@ class DMMotor : public Motor
    */
   void Enable() override
   {
+    if (lsb_.P_MAX == 0.0f) return;
     uint8_t data[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC};
     uint16_t id = param_.can_id;
     LibXR::CAN::ClassicPack tx_pack{};
@@ -243,6 +274,7 @@ class DMMotor : public Motor
    */
   void Control(const MotorCmd& cmd) override
   {
+    if (lsb_.P_MAX == 0.0f) return;
     switch (cmd.mode)
     {
       case ControlMode::MODE_POSITION:
@@ -285,6 +317,7 @@ class DMMotor : public Motor
    */
   void SaveZeroPoint() override
   {
+    if (lsb_.P_MAX == 0.0f) return;
     uint8_t data[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE};
     uint16_t id = param_.can_id;
     LibXR::CAN::ClassicPack tx_pack{};
@@ -300,6 +333,8 @@ class DMMotor : public Motor
   Param param_;
   LSB lsb_{};
   Motor::Feedback feedback_{};
+  bool angle_initialized_ = false;
+  float last_position_ = 0.0f;
   LibXR::CAN* can_;
   LibXR::MPMCQueue<LibXR::CAN::ClassicPack> recv_queue_{1};
 
@@ -366,6 +401,19 @@ class DMMotor : public Motor
       feedback_.omega = -feedback_.omega;
     }
     feedback_.abs_angle = feedback_.position;
+    if (angle_initialized_)
+    {
+      float delta = feedback_.position - last_position_;
+      if (delta > lsb_.P_MAX) delta -= 2.0f * lsb_.P_MAX;
+      if (delta < -lsb_.P_MAX) delta += 2.0f * lsb_.P_MAX;
+      feedback_.multi_turn_angle += delta;
+    }
+    else
+    {
+      feedback_.multi_turn_angle = feedback_.position;
+      angle_initialized_ = true;
+    }
+    last_position_ = feedback_.position;
   }
 
  public:
@@ -419,6 +467,7 @@ class DMMotor : public Motor
    */
   void MITControl(float pos, float vel, float kp, float kd, float tor)
   {
+    if (lsb_.P_MAX == 0.0f) return;
     if (this->feedback_.temp > 90.0f)
     {
       Disable();
@@ -462,6 +511,7 @@ class DMMotor : public Motor
  private:
   void PosControl(float pos, float vel)
   {
+    if (lsb_.P_MAX == 0.0f) return;
     if (this->feedback_.temp > 90.0f)
     {
       XR_LOG_WARN("motor %u high temperature detected",
@@ -496,6 +546,7 @@ class DMMotor : public Motor
 
   void SpdControl(float vel)
   {
+    if (lsb_.P_MAX == 0.0f) return;
     if (this->feedback_.temp > 85.0f)
     {
       Disable();

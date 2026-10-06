@@ -16,7 +16,7 @@ RoboMaster 裁判系统（2025 协议）串口收发模块：解析数据并发�
 3. 帧解析成功后发布下文的 Topic。
 4. 休眠 10 ms。
 
-当 `cmd` 不为空时，来自图传链路的键鼠数据（0x0304）经单参数的 `CMD::FeedRC()` 以 DR16 输入源（`RC_INPUT_DR16`）写入 CMD，与 `QDU-Robomaster/DR16` 使用同一个输入槽：W / A / S / D 设置底盘 x / y 指令为 ±0.5（按住 Shift 时加倍），鼠标 x / y 位移取反后乘以 1000/32768，作为云台 yaw / pitch 指令，左键开火，控制源为 `CTRL_SOURCE_RC`。`cmd` 为 `nullptr` 时不转发，之后可用 `BindCMD(CMD&)` 绑定。
+当 `cmd` 不为空时，来自图传链路的键鼠数据（0x0304）经单参数的 `CMD::FeedRC()` 以 DR16 输入源（`RC_INPUT_DR16`）写入 CMD，与 `QDU-Robomaster/DR16` 使用同一个输入槽：W / A / S / D 设置底盘 x / y 指令为 ±0.5（按住 Shift 时加倍），鼠标 x / y 位移取反后乘以 1000/32768，作为云台 yaw / pitch 指令，左键写入拨盘 `stir.isfire`；摩擦轮命令未由该输入提供。`cmd` 为 `nullptr` 时不转发，之后可用 `BindCMD(CMD&)` 绑定。
 
 发送：所有帧带有包头 CRC8、帧 CRC16 与序号，写入由互斥锁串行化。
 
@@ -32,7 +32,7 @@ At construction, Referee configures the UART with `baudrate` (8N1), creates the 
 3. After a frame is parsed, publish the Topics listed below.
 4. Sleep for 10 ms.
 
-When `cmd` is not null, keyboard and mouse data from the video link (0x0304) is written to CMD through the single-argument `CMD::FeedRC()` with the DR16 input source (`RC_INPUT_DR16`), the same input slot that `QDU-Robomaster/DR16` uses: W / A / S / D set the chassis x / y command to ±0.5 (doubled while Shift is held), the mouse x / y displacement is negated and multiplied by 1000/32768 to give the gimbal yaw / pitch command, the left button fires, and the control source is `CTRL_SOURCE_RC`. With `cmd` set to `nullptr` nothing is forwarded; `BindCMD(CMD&)` can bind one later.
+When `cmd` is not null, keyboard and mouse data from the video link (0x0304) is written to CMD through the single-argument `CMD::FeedRC()` with the DR16 input source (`RC_INPUT_DR16`), the same input slot that `QDU-Robomaster/DR16` uses: W / A / S / D set the chassis x / y command to ±0.5 (doubled while Shift is held), the mouse x / y displacement is negated and multiplied by 1000/32768 to give the gimbal yaw / pitch command, and the left button sets `stir.isfire`. This input does not supply a shooter command. With `cmd` set to `nullptr` nothing is forwarded; `BindCMD(CMD&)` can bind one later.
 
 Sending: every frame carries a header CRC8, a frame CRC16 and a sequence number, and writes are serialized by a mutex.
 

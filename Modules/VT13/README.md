@@ -13,23 +13,25 @@ VT13 链路遥控解析模块：从 UART 接收 21 字节协议帧，向 CMD 输
 
 帧校验：前 19 字节的 CRC16（LibXR `CRC16`，即 CRC-16/MCRF4XX，多项式 0x1021 反射、初值 0xFFFF）与帧尾 2 字节小端值比较；摇杆与拨轮通道取值在 364 到 1684 之间，挡位不超过 S。通过校验的帧经 `cmd.FeedRC(CMD::RCInputSource::RC_INPUT_VT13, ...)` 输入给 CMD。
 
-超过 100 ms 没有有效帧时判定离线：向 CMD 输入一次控制量全零、`chassis_online` 与 `gimbal_online` 为 `false` 的数据，并清除各切换状态。恢复后的第一帧用于建立边沿基线，不触发事件。
+超过 100 ms 没有有效帧时判定离线：向 CMD 输入一次四路命令均无效的零数据，并清除各切换状态。恢复后的第一帧用于建立边沿基线，不触发事件。
 
 控制源默认为遥控器模式；Shift+Ctrl+Q 切到遥控器模式，Shift+Ctrl+E 切到键鼠模式。
 
 - 遥控器模式：底盘 `x` 为左摇杆 Y，`y` 为左摇杆 X，`z` 为右摇杆 X；云台 `yaw` 为右摇杆 X，`pit` 为右摇杆 Y；均归一化到 [-1, 1]；扳机按下时开火。
-- 键鼠模式：W / S、A / D 使底盘 `y`、`x` 为 ±1，`z` 为 0，按住 Shift 时底盘模式为 `BOOST`；云台 `pit` 为鼠标 Y × 1000/32768，`yaw` 为鼠标 X × 1000/32768；鼠标左键按下时开火。
+- 键鼠模式：W / S、A / D 使底盘 `y`、`x` 为 ±1，`z` 为 0；云台 `pit` 为鼠标 Y × 1000/32768，`yaw` 为鼠标 X × 1000/32768；鼠标左键按下时拨弹。
+- 自定义左键每次按下翻转摩擦轮 `shooter.isfric`；扳机或鼠标左键控制拨盘 `stir.isfire`。
 
 At construction, VT13 defaults to the old Hero UART setting of 100000 bit/s, 8E2. Its receive thread reads one byte at a time and assembles 21-byte frames. Baud rate, parity and stop bits are configurable in `Param`.
 
 Frame validation: the CRC16 of the first 19 bytes (LibXR `CRC16`, i.e. CRC-16/MCRF4XX with reflected polynomial 0x1021 and initial value 0xFFFF) is compared with the little-endian value in the last 2 bytes; stick and dial channels lie in 364 to 1684 and the switch position is at most S. Frames that pass are fed to CMD through `cmd.FeedRC(CMD::RCInputSource::RC_INPUT_VT13, ...)`.
 
-When no valid frame arrives for more than 100 ms the link is judged offline: one data set with all control values zero and `chassis_online` and `gimbal_online` set to `false` is fed to CMD, and the toggle states are cleared. The first frame after recovery establishes the edge baseline and triggers no events.
+When no valid frame arrives for more than 100 ms, VT13 submits zero data with all four command-valid flags false and clears toggle states. The first frame after recovery establishes the edge baseline and triggers no events.
 
 The control source defaults to remote controller mode; Shift+Ctrl+Q switches to remote controller mode and Shift+Ctrl+E to keyboard and mouse mode.
 
 - Remote controller mode: chassis `x` is the left stick Y, `y` the left stick X and `z` the right stick X; gimbal `yaw` is the right stick X and `pit` the right stick Y; all are normalized to [-1, 1]; the trigger fires.
-- Keyboard and mouse mode: W / S and A / D set the chassis `y` and `x` to ±1 and `z` to 0, holding Shift sets the chassis mode to `BOOST`; gimbal `pit` is the mouse Y × 1000/32768 and `yaw` the mouse X × 1000/32768; the left mouse button fires.
+- Keyboard and mouse mode: W / S and A / D set chassis `y` and `x` to ±1 and `z` to 0; gimbal `pit` is mouse Y × 1000/32768 and `yaw` is mouse X × 1000/32768; the left mouse button requests stir fire.
+- The custom left key toggles `shooter.isfric`; the trigger or left mouse button controls `stir.isfire`.
 
 ## 2. 事件 / Events
 

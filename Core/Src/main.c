@@ -88,7 +88,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  // HAL_Delay(150);        // 给电源/晶振一点缓过来的时间
+   HAL_Delay(150);        // 给电源/晶振一点缓过来的时间
   /* USER CODE END Init */
 
   /* Configure the system clock */

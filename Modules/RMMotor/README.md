@@ -20,7 +20,7 @@ RMMotor 实现 `Motor` 接口，驱动 M2006、M3508 与 GM6020 电机。构造�
 
 同一条 CAN 总线（按 `LibXR::CAN` 对象区分）、同一控制帧 ID 的电机共享一个 8 字节发送帧，每个电机占 2 字节。组内所有已构造的电机在本轮都写入命令后才发送这一帧，因此同组的每个电机每个周期调用一次 `Control()`（或 `Relax()` / `Disable()`）。
 
-`Update()` 解码反馈：`position` 为编码器值 / 8192 × 2π（单圈，rad），`velocity` 单位为 rpm，`omega` 单位为 rad/s，`torque` 由反馈电流按型号力矩常数换算，`temp` 单位为 ℃；收到反馈后 `state = 1`，`abs_angle` 取 `position`。连续超过 255 次调用未收到反馈时返回 `ErrorCode::NO_RESPONSE`，否则返回 `OK`。
+`Update()` 解码反馈：`position` 为编码器值 / 8192 × 2π（单圈，rad），`velocity` 单位为 rpm，`omega` 单位为 rad/s，`torque` 由反馈电流按型号力矩常数换算，`temp` 单位为 ℃；收到反馈后 `state = 1`，`abs_angle` 取 `position`，`multi_turn_angle` 从首帧开始按单圈最短差累计（rad）。连续超过 255 次调用未收到反馈时返回 `ErrorCode::NO_RESPONSE`，否则返回 `OK`。
 
 `Control()` 处理两种模式，其余模式被忽略：
 
@@ -50,7 +50,7 @@ RMMotor implements the `Motor` interface and drives M2006, M3508 and GM6020 moto
 
 Motors on the same CAN bus (distinguished by the `LibXR::CAN` object) with the same control frame ID share one 8-byte transmit frame, with 2 bytes per motor. The frame is sent once every constructed motor of the group has written a command in the current round, so each motor of a group calls `Control()` (or `Relax()` / `Disable()`) once per cycle.
 
-`Update()` decodes the feedback: `position` is the encoder value / 8192 × 2π (single turn, rad), `velocity` is in rpm, `omega` in rad/s, `torque` is converted from the feedback current with the model torque constant, and `temp` is in ℃. After feedback arrives `state = 1`, and `abs_angle` takes `position`. After more than 255 consecutive calls without feedback it returns `ErrorCode::NO_RESPONSE`, otherwise `OK`.
+`Update()` decodes the feedback: `position` is the encoder value / 8192 × 2π (single turn, rad), `velocity` is in rpm, `omega` in rad/s, `torque` is converted from the feedback current with the model torque constant, and `temp` is in ℃. After feedback arrives `state = 1`, `abs_angle` takes `position`, and `multi_turn_angle` accumulates shortest single-turn differences from the first sample (rad). After more than 255 consecutive calls without feedback it returns `ErrorCode::NO_RESPONSE`, otherwise `OK`.
 
 `Control()` handles two modes and ignores the others:
 

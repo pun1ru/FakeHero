@@ -333,6 +333,14 @@ class DR16
       }
     }
 
+    if (((curr_rc.key & RawValue(Key::KEY_F)) &&
+         !(this->last_data_.key & RawValue(Key::KEY_F))) ||
+        (curr_rc.sw_l == 1 && this->last_data_.sw_l != 0 &&
+         this->last_data_.sw_l != 1))
+    {
+      this->fric_enable_ = !this->fric_enable_;
+    }
+
     constexpr float FULL_RANGE =
         static_cast<float>(DR16_CH_VALUE_MAX - DR16_CH_VALUE_MIN);
     constexpr float INV_FULL_RANGE = 1.0f / FULL_RANGE;
@@ -384,30 +392,21 @@ class DR16
       output_data.chassis.y += 1.0f;
     }
 
-    output_data.chassis.self_define = CMD::ChasStat::NONE;
-
     output_data.gimbal.pit += static_cast<float>(curr_rc.y) * MOUSE_SCALER;
     output_data.gimbal.yaw += -static_cast<float>(curr_rc.x) * MOUSE_SCALER;
-
-    if (curr_rc.key & RawValue(Key::KEY_SHIFT) or curr_rc.res == DR16_CH_VALUE_MAX)
-    {
-      output_data.chassis.self_define = CMD::ChasStat::BOOST;
-    }
-
-    if (curr_rc.key & RawValue(Key::KEY_C) or curr_rc.res == DR16_CH_VALUE_MIN)
-    {
-      output_data.chassis.self_define = CMD::ChasStat::STRETCH;
-    }
 
     output_data.chassis.x = std::clamp(output_data.chassis.x, -1.0f, 1.0f);
     output_data.chassis.y = std::clamp(output_data.chassis.y, -1.0f, 1.0f);
     output_data.chassis.z = std::clamp(output_data.chassis.z, -1.0f, 1.0f);
 
-    output_data.launcher.isfire =
+    output_data.shooter.isfric = this->fric_enable_;
+    output_data.stir.isfire =
         (curr_rc.res == DR16_CH_VALUE_MIN) or (curr_rc.press_l == 1);
 
     output_data.chassis_online = true;
     output_data.gimbal_online = true;
+    output_data.shooter_online = true;
+    output_data.stir_online = true;
     output_data.ctrl_source = CMD::ControlSource::CTRL_SOURCE_RC;
 
     this->last_data_ = curr_rc;
@@ -425,15 +424,17 @@ class DR16
     cmd_data_.chassis.x = 0;
     cmd_data_.chassis.y = 0;
     cmd_data_.chassis.z = 0;
-    cmd_data_.chassis.self_define = CMD::ChasStat::NONE;
-
     cmd_data_.gimbal.yaw = 0;
     cmd_data_.gimbal.pit = 0;
 
-    cmd_data_.launcher.isfire = false;
+    cmd_data_.shooter.isfric = false;
+    cmd_data_.stir.isfire = false;
 
     cmd_data_.chassis_online = false;
     cmd_data_.gimbal_online = false;
+    cmd_data_.shooter_online = false;
+    cmd_data_.stir_online = false;
+    fric_enable_ = false;
 
     cmd_->FeedRC(CMD::RCInputSource::RC_INPUT_DR16, cmd_data_);
   }
@@ -492,6 +493,7 @@ class DR16
 
   Data last_data_{};     /* 上一帧数据 */
   CMD::Data cmd_data_{}; /* 命令数据 */
+  bool fric_enable_ = false;
 #ifndef NDEBUG
   Data data_review_; /* 命令数据预览 */
 #endif

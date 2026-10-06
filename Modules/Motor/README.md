@@ -29,7 +29,7 @@ Motor 是库型模块（`standalone: false`）。业务模块只持有 `Motor&` 
 
 - `Motor::ControlMode`：`MODE_POSITION`、`MODE_VELOCITY`、`MODE_TORQUE`、`MODE_CURRENT`、`MODE_MIT`。
 - `Motor::MotorCmd`：`mode`、`reduction_ratio`（默认 1.0）、`torque`、`position`、`velocity`、`kp`、`kd`。各驱动实现其中一部分模式，字段的解释由驱动决定，例如 `RMMotor` 的 `MODE_CURRENT` 从 `velocity` 字段读取归一化电流，详见各驱动的 README。
-- `Motor::Feedback`：`error_id`、`state`、`position`（原始角度）、`abs_angle`、`velocity`（转速）、`omega`（角速度）、`torque`、`temp`。`abs_angle` 是 `LibXR::CycleValue<float>`，即归一化到 [0, 2π) 的单圈角；多圈角度由上层用相邻两次 `abs_angle` 的差值累加得到，`CycleValue` 相减得到 [-π, π) 的最短差。
+- `Motor::Feedback`：`error_id`、`state`、`position`（原始角度）、`abs_angle`（单圈角）、`multi_turn_angle`（多圈角，rad）、`velocity`（转速）、`omega`（角速度）、`torque`、`temp`。RM/LK 按单圈最短差累计，DM 按其型号位置量程展开；相邻反馈间转动须小于半个反馈周期，断电重启后计数重新开始。
 
 接入新驱动 `MyMotor`：`class MyMotor : public Motor`，实现全部纯虚函数；在 `Control()` 中按 `ControlMode` 分发到底层协议，在 `Update()` 中刷新 `Feedback`。上层模块继续使用 `Motor&`。`Update()` 与 `Control()` 在固定周期调用。
 
@@ -53,7 +53,7 @@ Data structures:
 
 - `Motor::ControlMode`: `MODE_POSITION`, `MODE_VELOCITY`, `MODE_TORQUE`, `MODE_CURRENT`, `MODE_MIT`.
 - `Motor::MotorCmd`: `mode`, `reduction_ratio` (default 1.0), `torque`, `position`, `velocity`, `kp`, `kd`. Each driver implements a subset of the modes and defines how the fields are interpreted; for example the `MODE_CURRENT` of `RMMotor` reads the normalized current from the `velocity` field, see the README of each driver.
-- `Motor::Feedback`: `error_id`, `state`, `position` (raw angle), `abs_angle`, `velocity` (speed), `omega` (angular velocity), `torque`, `temp`. `abs_angle` is a `LibXR::CycleValue<float>`, a single-turn angle normalized to [0, 2π); the upper layer accumulates a multi-turn angle from the difference of two consecutive `abs_angle` values, where subtracting `CycleValue` gives the shortest difference in [-π, π).
+- `Motor::Feedback`: `error_id`, `state`, `position` (raw angle), `abs_angle` (single-turn angle), `multi_turn_angle` (multi-turn angle in rad), `velocity` (speed), `omega` (angular velocity), `torque`, `temp`. RM/LK unwrap single-turn samples; DM unwraps its model position range. Motion between samples must be less than half the feedback period, and the count restarts after power loss.
 
 To attach a new driver `MyMotor`: `class MyMotor : public Motor` implements all pure virtual functions; `Control()` dispatches to the low-level protocol by `ControlMode`, and `Update()` refreshes `Feedback`. Upper-layer Modules keep using `Motor&`. `Update()` and `Control()` are called at a fixed period.
 

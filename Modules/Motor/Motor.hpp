@@ -60,6 +60,7 @@ class Motor
     uint8_t state = 0;                   ///< 电机错误状态 Motor error state
     float position;                      ///< 电机原始角度 Raw motor angle
     LibXR::CycleValue<float> abs_angle;  ///< 归一化到单圈的角度 Single-turn angle
+    float multi_turn_angle = 0.0f;       ///< 从首次反馈累计的多圈角度 (rad) Accumulated angle
     float velocity;                      ///< 转速 Speed
     float omega;                         ///< 角速度 Angular velocity
     float torque;                        ///< 扭矩 Torque
